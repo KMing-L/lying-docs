@@ -61,6 +61,11 @@ def cmd_analyze(args: argparse.Namespace) -> None:
     logger.info("Done. Report at: %s", report_path)
     print(f"\nReport generated: {report_path}")
 
+    if args.gen_issue:
+        issue_path = agent.generate_issues()
+        logger.info("Issue written to: %s", issue_path)
+        print(f"Issue generated:   {issue_path}")
+
 
 def cmd_version(_args: argparse.Namespace) -> None:
     """Print version and exit."""
@@ -84,6 +89,7 @@ examples:
   lyingdocs analyze --doc-path docs/ --code-path . -o output/audit
   lyingdocs analyze --doc-path docs/ --code-path . --argus-backend=local
   lyingdocs analyze --doc-path docs/ --code-path . --config lyingdocs.toml
+  lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
 """,
     )
     analyze_parser.add_argument(
@@ -143,6 +149,13 @@ examples:
     analyze_parser.add_argument(
         "--resume", action="store_true",
         help="Resume from workspace checkpoint if available",
+    )
+    analyze_parser.add_argument(
+        "--gen-issue", action="store_true",
+        help=(
+            "After analysis, generate GitHub issue drafts (title + body) "
+            "for each finding and write them to issues.json in the output directory"
+        ),
     )
     analyze_parser.set_defaults(func=cmd_analyze)
 

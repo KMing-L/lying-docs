@@ -183,11 +183,37 @@ lyingdocs analyze --doc-path docs/ --code-path . --resume
 # With explicit config file
 lyingdocs analyze --doc-path docs/ --code-path . --config myconfig.toml
 
+# Generate GitHub issue drafts after analysis
+lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
+
 # Show version
 lyingdocs version
 ```
 
-Available flags: `--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,claude_code,local}`, `--argus-model`, `--argus-base-url`, `--argus-codex-provider`, `--argus-codex-wire-api`, `--max-dispatches`, `--max-iterations`, `--config`, `--resume`.
+Available flags: `--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,claude_code,local}`, `--argus-model`, `--argus-base-url`, `--argus-codex-provider`, `--argus-codex-wire-api`, `--max-dispatches`, `--max-iterations`, `--config`, `--resume`, `--gen-issue`.
+
+---
+
+## Generating GitHub Issue Drafts
+
+Pass `--gen-issue` to automatically draft a GitHub issue for each finding after the analysis completes:
+
+```bash
+lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
+```
+
+LyingDocs uses Hermes to synthesise all findings into a single, polite GitHub issue and saves it to `issue.json` in the output directory. The file contains:
+
+- **`title`** — a short, descriptive issue title
+- **`body`** — a GitHub-flavored Markdown body that lists every finding, cites documentation and code references, and includes a friendly note acknowledging that the automated analysis may contain misunderstandings or false positives
+
+Post it directly to a GitHub repository with the [`gh` CLI](https://cli.github.com/):
+
+```bash
+gh issue create \
+  --title "$(jq -r '.title' output/issue.json)" \
+  --body  "$(jq -r '.body'  output/issue.json)"
+```
 
 ---
 
@@ -205,6 +231,7 @@ Available flags: `--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,
 ## Roadmap
 
 - [x] **Multi-harness support** — Argus now runs on Codex, Claude Code, or a built-in local agent
+- [x] **Issue generation** — `--gen-issue` drafts polite GitHub issues for every finding, ready to post
 - [ ] **One-session with memory support** - Argus backends now maintain state across multiple tasks, allowing for deeper investigations that build on previous findings
 - [ ] **Deeper analysis** — multi-hop reasoning across doc hierarchies; version-aware diffing to catch when code changed but docs didn't
 - [ ] **Customization for papers** — a "paper mode" that treats academic papers as documentation and surfaces misalignments between paper claims and code behavior

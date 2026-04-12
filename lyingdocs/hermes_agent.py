@@ -80,6 +80,17 @@ class HermesAgent:
 
         logger.info("HermesAgent started — %d doc files indexed", len(self.doctree.files))
 
+        # If resuming an already-finalized run, skip the agent loop entirely
+        if self.workspace.is_complete():
+            logger.info("Workspace already finalized — skipping agent loop.")
+            report_path = self.output_dir / "Misalignment_Report.md"
+            if report_path.exists():
+                logger.info("Report already exists — skipping report generation.")
+            else:
+                report_path = Path(self._generate_report())
+                self.workspace.save_state()
+            return str(report_path)
+
         # Agent loop
         iteration = 0
         while iteration < self.max_iterations:
@@ -332,6 +343,51 @@ class HermesAgent:
         report_path.write_text(report, encoding="utf-8")
         logger.info("Final report written to %s (%d chars)", report_path, len(report))
         return report_path
+
+    def generate_issues(self) -> Path:
+        """Generate a single GitHub issue (title + body) summarising all findings.
+
+        Returns the path to the written issue.json file.
+        """
+        issue_path = self.output_dir / "issue.json"
+
+        if issue_path.exists():
+            logger.info("Issue file already exists at %s — skipping generation.", issue_path)
+            return issue_path
+
+        if not self.workspace.findings:
+            logger.info("No findings — skipping issue generation.")
+            issue_path.write_text("{}", encoding="utf-8")
+            return issue_path
+
+        issue_prompt = self._load_prompt("issue_generator.txt")
+        findings_json = json.dumps(
+            [asdict(f) for f in self.workspace.findings], indent=2
+        )
+
+        logger.info(
+            "Generating issue for %d findings...", len(self.workspace.findings)
+        )
+
+        raw = call_llm(self.client, self.model, issue_prompt, findings_json)
+
+        # Strip accidental markdown fences if the model added them
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            if raw.endswith("```"):
+                raw = raw.rsplit("```", 1)[0]
+            raw = raw.strip()
+
+        try:
+            issue = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            logger.warning("Issue generation returned invalid JSON: %s", exc)
+            issue = {}
+
+        issue_path.write_text(json.dumps(issue, indent=2, ensure_ascii=False), encoding="utf-8")
+        logger.info("Issue written to %s", issue_path)
+        return issue_path
 
     def _load_prompt(self, filename: str) -> str:
         return (PROMPTS_DIR / filename).read_text(encoding="utf-8")
