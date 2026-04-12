@@ -48,7 +48,7 @@ lyingdocs analyze --doc-path docs/ --code-path . -o output/audit
 
 LyingDocs loads configuration from multiple sources (later overrides earlier):
 
-1. **Built-in defaults** (OpenAI API, gpt-4o)
+1. **Built-in defaults** (OpenAI API, gpt-5.4)
 2. **Config file** — `lyingdocs.toml` in project root, or `~/.config/lyingdocs/config.toml`
 3. **Environment variables** / `.env` file
 4. **CLI arguments**
@@ -56,6 +56,8 @@ LyingDocs loads configuration from multiple sources (later overrides earlier):
 Hermes and Argus are configured independently, so you can run a cheaper planner model for Hermes and a stronger coder model for Argus (or point them at entirely different API endpoints).
 
 ### Config File Example
+
+Example can be found in [tests/configs](https://github.com/KMing-L/lying-docs/tree/main/tests/configs). Here's the relevant snippet:
 
 ```toml
 [hermes]
@@ -90,8 +92,6 @@ max_iterations = 50         # max Hermes loop iterations
 argus_task_timeout = 1200   # seconds per Argus task (codex / claude_code backends)
 token_budget = 524288       # Hermes context budget before compression
 ```
-
-> **Note:** The previous flat format (top-level `model` / `base_url` and a `[codex]` section) is no longer supported. LyingDocs will exit with a clear migration error if it sees the old shape — move to `[hermes]` / `[argus]` as shown above.
 
 ### Environment Variables
 
@@ -174,7 +174,7 @@ lyingdocs analyze --doc-path docs/ --code-path . --argus-backend=local
 
 # Different models for Hermes and Argus
 lyingdocs analyze --doc-path docs/ --code-path . \
-  --hermes-model gpt-4o-mini \
+  --hermes-model gpt-5.4 \
   --argus-model gpt-5.4
 
 # Resume interrupted analysis
@@ -205,6 +205,7 @@ Available flags: `--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,
 ## Roadmap
 
 - [x] **Multi-harness support** — Argus now runs on Codex, Claude Code, or a built-in local agent
+- [ ] **One-session with memory support** - Argus backends now maintain state across multiple tasks, allowing for deeper investigations that build on previous findings
 - [ ] **Deeper analysis** — multi-hop reasoning across doc hierarchies; version-aware diffing to catch when code changed but docs didn't
 - [ ] **Customization for papers** — a "paper mode" that treats academic papers as documentation and surfaces misalignments between paper claims and code behavior
 - [ ] **Auto-fix mode** — Hermes proposes doc patches; you review and apply

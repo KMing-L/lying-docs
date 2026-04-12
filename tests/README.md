@@ -98,7 +98,7 @@ lyingdocs analyze \
   --code-path tests/fixture/code \
   --output-dir tests/out/split \
   --config tests/configs/local.toml \
-  --hermes-model gpt-4o-mini \
+  --hermes-model gpt-5.4-mini \
   --argus-model gpt-5.4
 ```
 

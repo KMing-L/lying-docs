@@ -10,13 +10,13 @@ from dotenv import load_dotenv
 
 DEFAULTS = {
     # Hermes (planner agent)
-    "hermes_model": "gpt-4o",
+    "hermes_model": "gpt-5.4",
     "hermes_base_url": "https://api.openai.com/v1",
     "hermes_api_key_env": "OPENAI_API_KEY",
 
     # Argus (code analysis agent)
     "argus_backend": "local",  # "codex" | "claude_code" | "local"
-    "argus_model": "gpt-4o",
+    "argus_model": "gpt-5.4",
     "argus_base_url": "https://api.openai.com/v1",
     "argus_api_key_env": "OPENAI_API_KEY",
 
