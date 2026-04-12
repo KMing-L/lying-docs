@@ -1,32 +1,124 @@
 <p align="center">
-  <img src="assets/logo.png" alt="lyingdocs" width="200" />
+  <img src="assets/logo.png" alt="LyingDocs" width="200" />
 </p>
 
 <h1 align="center">LyingDocs</h1>
 
 <p align="center">
-  Your docs are lying. Here's how to find out.
+  A trust layer for your repository.
+</p>
+
+<p align="center">
+  Detect when your docs, code, configs, and examples stop agreeing with each other.
 </p>
 
 ---
 
-Every codebase has them: features documented but never shipped, behavior that quietly diverged from the spec, values claimed to be configurable that are hardcoded deep in a function nobody reads. In the age of Vibe Coding, developers ship both code and docs through LLMs — fast, fluid, and increasingly misaligned.
+Modern repositories are read by more than humans.
 
-LyingDocs deploys two autonomous agents against your repository to surface these inconsistencies before your users do.
+They are read by teammates, new contributors, users, reviewers, downstream integrators — and increasingly by AI agents.
+
+That only works if the repository can be trusted.
+
+But trust quietly erodes over time:
+
+- documentation describes features that were never shipped
+- code behavior drifts away from the spec
+- examples stop matching reality
+- values claimed to be configurable are hardcoded deep in the codebase
+- papers and implementation tell different stories
+
+**LyingDocs is a trust layer for your repository.**  
+It audits the gap between what your repo *says* and what your code *actually does* — before your users, contributors, or agents learn the wrong thing.
+
+---
+
+## Why LyingDocs exists
+
+Every codebase accumulates invisible trust debt.
+
+In the age of fast iteration and LLM-assisted development, teams now ship code and documentation faster than ever — but not always in sync. A repo may still look polished while becoming progressively less reliable as a source of truth.
+
+That is the problem LyingDocs is built to solve.
+
+LyingDocs is not just a documentation checker. It is a system for surfacing **repository misalignment**:
+
+- docs that overclaim
+- code paths that are undocumented
+- specs that no longer match implementation
+- "configurable" behavior that is actually fixed
+- claims in papers or READMEs that cannot be supported by the code
+
+The goal is simple:
+
+> Keep your repository trustworthy for humans and machines.
+
+---
+
+## What LyingDocs does
+
+LyingDocs deploys two autonomous agents against your repository:
+
+- **Hermes** reads your documentation, plans an audit strategy, and decides what needs to be verified
+- **Argus** investigates the actual codebase and reports what the code really does
+
+Hermes then reconciles the two and writes a structured report of the mismatches it finds.
+
+This lets you catch cases where your repository is no longer telling the truth about itself.
 
 ---
 
 ## How it works
 
-**Hermes** autonomously traverses your documentation, plans an audit strategy, and dispatches targeted analysis tasks.
+### 1. Hermes reads what the repo claims
 
-**Argus** executes each task against your actual codebase, reporting what the code *really* does. You choose how Argus investigates the code — pick the backend that fits your setup:
+Hermes traverses your documentation and extracts claims, assumptions, and implementation promises from sources such as:
+
+- docs/
+- README files
+- setup guides
+- usage examples
+- configuration references
+- papers and research writeups
+
+It then plans an audit by turning those claims into targeted investigation tasks.
+
+### 2. Argus checks what the code actually does
+
+Argus executes each task against your real codebase.
+
+You can choose the backend that best fits your setup:
 
 - **`codex`** — [OpenAI Codex CLI](https://github.com/openai/codex) subprocess
 - **`claude_code`** — [Claude Code](https://docs.anthropic.com/claude/docs/claude-code) CLI subprocess (`claude -p`)
-- **`local`** — a built-in minimal agent loop that uses filesystem tools and calls any OpenAI-compatible API directly (no external CLI required)
+- **`local`** — built-in minimal agent loop using filesystem tools and any OpenAI-compatible API directly
 
-Hermes reconciles the two — and writes you a report.
+### 3. LyingDocs reports the trust gaps
+
+Hermes reconciles documented claims with observed implementation behavior and outputs a report of misalignments.
+
+These findings can then be reviewed by maintainers, turned into issues, and eventually enforced in CI.
+
+---
+
+## Positioning
+
+LyingDocs is best thought of as:
+
+- a **trust layer** for your repo
+- a **docs-to-code alignment guard**
+- a **pre-user warning system** for misleading documentation
+- a future **CI / GitHub Action quality gate** for repository truthfulness
+
+It is not meant to be a tool you manually open every day.
+
+It is meant to become something your repository runs automatically:
+
+- on pull requests
+- before releases
+- during scheduled audits
+- before docs deployment
+- as part of your GitHub Actions workflow
 
 ---
 
@@ -34,7 +126,9 @@ Hermes reconciles the two — and writes you a report.
 
 ```bash
 pip install lyingdocs
-```
+````
+
+---
 
 ## Quick Start
 
@@ -44,20 +138,54 @@ export OPENAI_API_KEY="sk-..."
 lyingdocs analyze --doc-path docs/ --code-path . -o output/audit
 ```
 
+This performs a full audit of your repository and produces a report describing where documentation and implementation no longer align.
+
+---
+
+## Example use cases
+
+Use LyingDocs when you want to answer questions like:
+
+* Does the README still reflect the real behavior of the project?
+* Are our examples and quickstarts still valid?
+* Did code change without the docs changing with it?
+* Are we claiming configuration that does not actually exist?
+* Does our paper describe behavior the implementation does not support?
+* Can an AI agent trust this repository as a source of truth?
+
+---
+
+## Misalignment categories
+
+| Category           | Description                                           |
+| ------------------ | ----------------------------------------------------- |
+| **LogicMismatch**  | Code contradicts documentation                        |
+| **PhantomSpec**    | Documentation describes non-existent features         |
+| **ShadowLogic**    | Important code behavior exists but is undocumented    |
+| **HardcodedDrift** | Supposedly configurable values are actually hardcoded |
+
+These categories represent different ways repository trust breaks down.
+
+---
+
 ## Configuration
 
-LyingDocs loads configuration from multiple sources (later overrides earlier):
+LyingDocs loads configuration from multiple sources, with later sources overriding earlier ones:
 
 1. **Built-in defaults** (OpenAI API, gpt-5.4)
 2. **Config file** — `lyingdocs.toml` in project root, or `~/.config/lyingdocs/config.toml`
-3. **Environment variables** / `.env` file
+3. **Environment variables** / `.env`
 4. **CLI arguments**
 
-Hermes and Argus are configured independently, so you can run a cheaper planner model for Hermes and a stronger coder model for Argus (or point them at entirely different API endpoints).
+Hermes and Argus are configured independently, so you can use:
 
-### Config File Example
+* a cheaper planning model for Hermes
+* a stronger coding / investigation model for Argus
+* different providers or endpoints for each agent
 
-Example can be found in [tests/configs](https://github.com/KMing-L/lying-docs/tree/main/tests/configs). Here's the relevant snippet:
+### Config file example
+
+Example configs live in [tests/configs](https://github.com/KMing-L/lying-docs/tree/main/tests/configs).
 
 ```toml
 [hermes]
@@ -93,32 +221,35 @@ argus_task_timeout = 1200   # seconds per Argus task (codex / claude_code backen
 token_budget = 524288       # Hermes context budget before compression
 ```
 
-### Environment Variables
+### Environment variables
 
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | **Required.** API key used by both agents unless overridden via `api_key_env` |
-| `HERMES_MODEL` | Hermes LLM model name |
-| `HERMES_BASE_URL` | Hermes API base URL |
-| `ARGUS_BACKEND` | `codex`, `claude_code`, or `local` |
-| `ARGUS_MODEL` | Argus LLM model name |
-| `ARGUS_BASE_URL` | Argus API base URL |
-| `ARGUS_CODEX_PROVIDER` | Codex backend: provider name |
-| `ARGUS_CODEX_WIRE_API` | Codex backend: provider wire_api (`responses` or `chat`) |
-| `ARGUS_CODEX_PATH` | Codex backend: explicit path to the `codex` binary |
-| `ARGUS_CLAUDE_CODE_PATH` | Claude Code backend: explicit path to the `claude` binary |
-| `ARGUS_TASK_TIMEOUT` | Timeout per Argus task (seconds, used by codex / claude_code backends) |
-| `TOKEN_BUDGET` | Hermes context tokens before compression |
+| Variable                 | Description                                    |
+| ------------------------ | ---------------------------------------------- |
+| `OPENAI_API_KEY`         | Required unless overridden via `api_key_env`   |
+| `HERMES_MODEL`           | Hermes model name                              |
+| `HERMES_BASE_URL`        | Hermes API base URL                            |
+| `ARGUS_BACKEND`          | `codex`, `claude_code`, or `local`             |
+| `ARGUS_MODEL`            | Argus model name                               |
+| `ARGUS_BASE_URL`         | Argus API base URL                             |
+| `ARGUS_CODEX_PROVIDER`   | Codex backend provider                         |
+| `ARGUS_CODEX_WIRE_API`   | Codex backend wire API (`responses` or `chat`) |
+| `ARGUS_CODEX_PATH`       | Explicit path to `codex`                       |
+| `ARGUS_CLAUDE_CODE_PATH` | Explicit path to `claude`                      |
+| `ARGUS_TASK_TIMEOUT`     | Timeout per Argus task in seconds              |
+| `TOKEN_BUDGET`           | Hermes context budget before compression       |
 
 ---
 
-## Argus Backends
+## Argus backends
 
-Argus is the "deep code analysis" side of the pipeline. Pick one backend in `lyingdocs.toml` (or via `--argus-backend`):
+Argus is the deep code analysis side of the system.
 
-### `local` (no external CLI required)
+### `local`
 
-A built-in agent loop that uses `list_directory` / `read_file` / `search_code` / `finish` tools and calls any OpenAI-compatible chat completions API directly. Best for getting started — only needs an API key.
+No external CLI required.
+Uses a built-in agent loop with filesystem tools and an OpenAI-compatible API.
+
+Good default for getting started.
 
 ```toml
 [argus]
@@ -127,7 +258,9 @@ model = "gpt-5.4"
 base_url = "https://api.openai.com/v1"
 ```
 
-### `codex` ([OpenAI Codex CLI](https://github.com/openai/codex))
+### `codex`
+
+Uses [OpenAI Codex CLI](https://github.com/openai/codex).
 
 ```bash
 npm install -g @openai/codex
@@ -140,15 +273,17 @@ backend = "codex"
 [argus.codex]
 provider = "openai"
 wire_api = "responses"
-# path = "/usr/local/bin/codex"  # optional
 ```
 
-Codex is auto-detected in this order:
-1. Explicit path from config (`argus.codex.path`)
-2. System `PATH` (`which codex`)
-3. Local `node_modules/.bin/codex`
+Resolution order:
 
-### `claude_code` ([Claude Code](https://docs.anthropic.com/claude/docs/claude-code))
+1. explicit path from config
+2. system `PATH`
+3. local `node_modules/.bin/codex`
+
+### `claude_code`
+
+Uses [Claude Code](https://docs.anthropic.com/claude/docs/claude-code).
 
 ```toml
 [argus]
@@ -156,20 +291,26 @@ backend = "claude_code"
 model = "claude-sonnet-4-6"
 
 [argus.claude_code]
-# path = "/usr/local/bin/claude"  # optional; else resolved via PATH
+# path = "/usr/local/bin/claude"
 ```
 
-Invoked as `claude -p <prompt> --model <argus_model> --output-format text` with `cwd` set to your code root.
+Invoked as:
+
+```bash
+claude -p <prompt> --model <argus_model> --output-format text
+```
+
+with `cwd` set to your code root.
 
 ---
 
-## CLI Reference
+## CLI reference
 
 ```bash
 # Full analysis
 lyingdocs analyze --doc-path docs/ --code-path . -o output/audit
 
-# Pick the Argus backend on the command line
+# Choose Argus backend
 lyingdocs analyze --doc-path docs/ --code-path . --argus-backend=local
 
 # Different models for Hermes and Argus
@@ -180,34 +321,38 @@ lyingdocs analyze --doc-path docs/ --code-path . \
 # Resume interrupted analysis
 lyingdocs analyze --doc-path docs/ --code-path . --resume
 
-# With explicit config file
+# Use an explicit config file
 lyingdocs analyze --doc-path docs/ --code-path . --config myconfig.toml
 
-# Generate GitHub issue drafts after analysis
+# Generate GitHub issue drafts
 lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
 
 # Show version
 lyingdocs version
 ```
 
-Available flags: `--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,claude_code,local}`, `--argus-model`, `--argus-base-url`, `--argus-codex-provider`, `--argus-codex-wire-api`, `--max-dispatches`, `--max-iterations`, `--config`, `--resume`, `--gen-issue`.
+Available flags:
+
+`--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,claude_code,local}`, `--argus-model`, `--argus-base-url`, `--argus-codex-provider`, `--argus-codex-wire-api`, `--max-dispatches`, `--max-iterations`, `--config`, `--resume`, `--gen-issue`
 
 ---
 
-## Generating GitHub Issue Drafts
+## Generating GitHub issue drafts
 
-Pass `--gen-issue` to automatically draft a GitHub issue for each finding after the analysis completes:
+Pass `--gen-issue` to automatically draft a GitHub issue after analysis:
 
 ```bash
 lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
 ```
 
-LyingDocs uses Hermes to synthesise all findings into a single, polite GitHub issue and saves it to `issue.json` in the output directory. The file contains:
+LyingDocs uses Hermes to synthesize findings into a single, polite GitHub issue and saves it to `issue.json` in the output directory.
 
-- **`title`** — a short, descriptive issue title
-- **`body`** — a GitHub-flavored Markdown body that lists every finding, cites documentation and code references, and includes a friendly note acknowledging that the automated analysis may contain misunderstandings or false positives
+The file contains:
 
-Post it directly to a GitHub repository with the [`gh` CLI](https://cli.github.com/):
+* **`title`** — a short issue title
+* **`body`** — a GitHub-flavored Markdown issue body listing findings, code references, doc references, and a note acknowledging possible false positives
+
+You can post it directly with the [`gh` CLI](https://cli.github.com/):
 
 ```bash
 gh issue create \
@@ -215,37 +360,79 @@ gh issue create \
   --body  "$(jq -r '.body'  output/issue.json)"
 ```
 
+This makes LyingDocs useful not only as an audit tool, but as a bridge into repository maintenance workflows.
+
 ---
 
-## Misalignment Categories
+## GitHub Actions direction
 
-| Category | Description |
-|----------|-------------|
-| **LogicMismatch** | Code contradicts documentation |
-| **PhantomSpec** | Documentation describes non-existent features |
-| **ShadowLogic** | Important undocumented code logic |
-| **HardcodedDrift** | Supposedly configurable values that are hardcoded |
+LyingDocs is moving toward a natural next step:
+
+**continuous trust enforcement inside GitHub Actions**
+
+The long-term shape of the project is not “run this manually forever.”
+The long-term shape is:
+
+* run on pull requests
+* comment on suspicious docs/code drift
+* warn maintainers before release
+* surface trust regressions early
+* make repository truthfulness part of CI
+
+That is where LyingDocs becomes most valuable: not only as an analyzer, but as infrastructure.
 
 ---
 
 ## Roadmap
 
-- [x] **Multi-harness support** — Argus now runs on Codex, Claude Code, or a built-in local agent
-- [x] **Issue generation** — `--gen-issue` drafts polite GitHub issues for every finding, ready to post
-- [ ] **One-session with memory support** - Argus backends now maintain state across multiple tasks, allowing for deeper investigations that build on previous findings
-- [ ] **Deeper analysis** — multi-hop reasoning across doc hierarchies; version-aware diffing to catch when code changed but docs didn't
-- [ ] **Customization for papers** — a "paper mode" that treats academic papers as documentation and surfaces misalignments between paper claims and code behavior
-- [ ] **Auto-fix mode** — Hermes proposes doc patches; you review and apply
+* [x] **Multi-harness support** — Argus runs on Codex, Claude Code, or a built-in local agent
+* [x] **Issue generation** — `--gen-issue` drafts GitHub issues from findings
+* [ ] **GitHub Action integration** — run LyingDocs automatically in PRs and CI to catch trust regressions as they are introduced
+* [ ] **One-session memory support** — Argus backends retain state across tasks for deeper multi-step investigations
+* [ ] **Deeper analysis** — multi-hop reasoning across doc hierarchies and version-aware diffing to detect when code changed but docs did not
+* [ ] **Paper mode** — treat academic papers as documentation and detect paper-to-code misalignment
+* [ ] **Auto-fix mode** — Hermes proposes doc patches for human review and application
 
 ---
 
-## For Researchers 🔬
+## For researchers
 
-A paper is just another kind of documentation — a translation of code into human language, written under deadline, reviewed long after the implementation settled.
+A paper is also documentation.
 
-If you've ever wondered whether your repo can be used by other researchers, or whether there are misalignments between your paper and your code, LyingDocs can help you find out.
+It is a human-language description of code, behavior, claims, and expected results — often written under deadline, and often drifting away from the implementation over time.
 
-The problem is the same. Paper is documentation for code. LyingDocs is for papers too.
+If you want to know whether:
+
+* your repo matches your paper
+* your claims are supported by the code
+* another researcher can trust your implementation
+
+then LyingDocs can help.
+
+The problem is the same.
+Paper is documentation for code.
+LyingDocs is for papers too.
+
+---
+
+## Why “trust layer”
+
+Because the problem is bigger than stale docs.
+
+A repository becomes untrustworthy whenever its outward description and inward behavior drift apart.
+
+That harms:
+
+* users trying to adopt the project
+* contributors trying to extend it
+* maintainers trying to review changes
+* researchers trying to reproduce results
+* AI agents trying to understand the repo
+
+LyingDocs exists to make that gap visible.
+
+Not after users complain.
+Before.
 
 ---
 
