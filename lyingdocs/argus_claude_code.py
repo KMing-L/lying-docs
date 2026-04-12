@@ -49,12 +49,24 @@ def run_claude_code_task(
         focus_section = f"\nPriority files/directories:\n{paths_str}\n"
 
     full_prompt = (
-        f"You are Argus, a code analyst.\n\n"
+        f"You are Argus, a code analyst. Your job is to verify a specific claim "
+        f"about a codebase by reading the actual source files.\n\n"
         f"Task: {task_description}\n"
         f"{focus_section}\n"
-        f"Investigate the code at {code_path.resolve()} and return a report with "
-        f"a verdict (confirmed / contradicted / not-found / partial) plus concrete "
-        f"file:line references and short quoted snippets."
+        f"Code root: {code_path.resolve()}\n\n"
+        f"Instructions:\n"
+        f"1. Explore the relevant code areas and READ the files that bear on the claim in full — "
+        f"do not rely on search snippets or filenames alone.\n"
+        f"2. Pay special attention to: mathematical formulas and equations (verify "
+        f"operator-by-operator), numerical constants and thresholds, algorithm control flow, "
+        f"and configuration key names with their defaults.\n"
+        f"3. Ground every conclusion in concrete file:line references with short quoted snippets.\n\n"
+        f"Return a report with:\n"
+        f"- A one-line verdict: confirmed / contradicted / not-found / partial\n"
+        f"- Specific file:line references for every claim\n"
+        f"- Short quoted code snippets as evidence\n"
+        f"- Any caveats or ambiguities\n\n"
+        f"Do NOT speculate. Only report what the code actually shows."
     )
 
     output_file = output_dir / f"argus_task_{task_id}.txt"
