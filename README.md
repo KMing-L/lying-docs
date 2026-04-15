@@ -142,6 +142,17 @@ This performs a full audit of your repository and produces a report describing w
 
 ---
 
+## Documentation
+
+| | |
+| --- | --- |
+| [Configuration](docs/configuration.md) | Config file schema, environment variables, layer resolution |
+| [Argus Backends](docs/backends.md) | Setup for `local`, `codex`, and `claude_code` |
+| [CLI Reference](docs/cli.md) | All flags, commands, and output artifacts |
+| [GitHub Issues](docs/guides/github-issues.md) | Using `--gen-issue` to draft and post issues |
+
+---
+
 ## Example use cases
 
 Use LyingDocs when you want to answer questions like:
@@ -165,202 +176,6 @@ Use LyingDocs when you want to answer questions like:
 | **HardcodedDrift** | Supposedly configurable values are actually hardcoded |
 
 These categories represent different ways repository trust breaks down.
-
----
-
-## Configuration
-
-LyingDocs loads configuration from multiple sources, with later sources overriding earlier ones:
-
-1. **Built-in defaults** (OpenAI API, gpt-5.4)
-2. **Config file** — `lyingdocs.toml` in project root, or `~/.config/lyingdocs/config.toml`
-3. **Environment variables** / `.env`
-4. **CLI arguments**
-
-Hermes and Argus are configured independently, so you can use:
-
-* a cheaper planning model for Hermes
-* a stronger coding / investigation model for Argus
-* different providers or endpoints for each agent
-
-### Config file example
-
-Example configs live in [tests/configs](https://github.com/KMing-L/lying-docs/tree/main/tests/configs).
-
-```toml
-[hermes]
-model = "gpt-5.4"
-base_url = "https://api.openai.com/v1"
-# api_key_env = "OPENAI_API_KEY"  # optional — defaults to OPENAI_API_KEY
-
-[argus]
-backend = "local"           # "codex" | "claude_code" | "local"
-model = "gpt-5.4"
-base_url = "https://api.openai.com/v1"
-# api_key_env = "OPENAI_API_KEY"
-
-# Only read when argus.backend = "codex"
-[argus.codex]
-provider = "openai"
-wire_api = "responses"
-# path = "/usr/local/bin/codex"   # optional: explicit codex binary path
-
-# Only read when argus.backend = "claude_code"
-[argus.claude_code]
-# path = "/usr/local/bin/claude"  # optional: explicit claude binary path
-
-# Only read when argus.backend = "local"
-[argus.local]
-max_iterations = 25         # per-task agent loop cap
-max_read_bytes = 200000     # per read_file call
-
-[limits]
-max_dispatches = 20         # max Argus dispatches per Hermes run
-max_iterations = 50         # max Hermes loop iterations
-argus_task_timeout = 1200   # seconds per Argus task (codex / claude_code backends)
-token_budget = 524288       # Hermes context budget before compression
-```
-
-### Environment variables
-
-| Variable                 | Description                                    |
-| ------------------------ | ---------------------------------------------- |
-| `OPENAI_API_KEY`         | Required unless overridden via `api_key_env`   |
-| `HERMES_MODEL`           | Hermes model name                              |
-| `HERMES_BASE_URL`        | Hermes API base URL                            |
-| `ARGUS_BACKEND`          | `codex`, `claude_code`, or `local`             |
-| `ARGUS_MODEL`            | Argus model name                               |
-| `ARGUS_BASE_URL`         | Argus API base URL                             |
-| `ARGUS_CODEX_PROVIDER`   | Codex backend provider                         |
-| `ARGUS_CODEX_WIRE_API`   | Codex backend wire API (`responses` or `chat`) |
-| `ARGUS_CODEX_PATH`       | Explicit path to `codex`                       |
-| `ARGUS_CLAUDE_CODE_PATH` | Explicit path to `claude`                      |
-| `ARGUS_TASK_TIMEOUT`     | Timeout per Argus task in seconds              |
-| `TOKEN_BUDGET`           | Hermes context budget before compression       |
-
----
-
-## Argus backends
-
-Argus is the deep code analysis side of the system.
-
-### `local`
-
-No external CLI required.
-Uses a built-in agent loop with filesystem tools and an OpenAI-compatible API.
-
-Good default for getting started.
-
-```toml
-[argus]
-backend = "local"
-model = "gpt-5.4"
-base_url = "https://api.openai.com/v1"
-```
-
-### `codex`
-
-Uses [OpenAI Codex CLI](https://github.com/openai/codex).
-
-```bash
-npm install -g @openai/codex
-```
-
-```toml
-[argus]
-backend = "codex"
-
-[argus.codex]
-provider = "openai"
-wire_api = "responses"
-```
-
-Resolution order:
-
-1. explicit path from config
-2. system `PATH`
-3. local `node_modules/.bin/codex`
-
-### `claude_code`
-
-Uses [Claude Code](https://docs.anthropic.com/claude/docs/claude-code).
-
-```toml
-[argus]
-backend = "claude_code"
-model = "claude-sonnet-4-6"
-
-[argus.claude_code]
-# path = "/usr/local/bin/claude"
-```
-
-Invoked as:
-
-```bash
-claude -p <prompt> --model <argus_model> --output-format text
-```
-
-with `cwd` set to your code root.
-
----
-
-## CLI reference
-
-```bash
-# Full analysis
-lyingdocs analyze --doc-path docs/ --code-path . -o output/audit
-
-# Choose Argus backend
-lyingdocs analyze --doc-path docs/ --code-path . --argus-backend=local
-
-# Different models for Hermes and Argus
-lyingdocs analyze --doc-path docs/ --code-path . \
-  --hermes-model gpt-5.4 \
-  --argus-model gpt-5.4
-
-# Resume interrupted analysis
-lyingdocs analyze --doc-path docs/ --code-path . --resume
-
-# Use an explicit config file
-lyingdocs analyze --doc-path docs/ --code-path . --config myconfig.toml
-
-# Generate GitHub issue drafts
-lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
-
-# Show version
-lyingdocs version
-```
-
-Available flags:
-
-`--hermes-model`, `--hermes-base-url`, `--argus-backend {codex,claude_code,local}`, `--argus-model`, `--argus-base-url`, `--argus-codex-provider`, `--argus-codex-wire-api`, `--max-dispatches`, `--max-iterations`, `--config`, `--resume`, `--gen-issue`
-
----
-
-## Generating GitHub issue drafts
-
-Pass `--gen-issue` to automatically draft a GitHub issue after analysis:
-
-```bash
-lyingdocs analyze --doc-path docs/ --code-path . --gen-issue
-```
-
-LyingDocs uses Hermes to synthesize findings into a single, polite GitHub issue and saves it to `issue.json` in the output directory.
-
-The file contains:
-
-* **`title`** — a short issue title
-* **`body`** — a GitHub-flavored Markdown issue body listing findings, code references, doc references, and a note acknowledging possible false positives
-
-You can post it directly with the [`gh` CLI](https://cli.github.com/):
-
-```bash
-gh issue create \
-  --title "$(jq -r '.title' output/issue.json)" \
-  --body  "$(jq -r '.body'  output/issue.json)"
-```
-
-This makes LyingDocs useful not only as an audit tool, but as a bridge into repository maintenance workflows.
 
 ---
 
